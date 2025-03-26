@@ -62,7 +62,7 @@ fun LoginScreen(onRegisterClick: () -> Unit, onLoginClick: (String, String) -> U
                     errorMessage = "Usuário e senha são obrigatórios!"
                 } else {
                     errorMessage = ""
-                    onLoginClick(username, password) // Chama a função de login
+                    onLoginClick(username, password)
                 }
             }
         ) {

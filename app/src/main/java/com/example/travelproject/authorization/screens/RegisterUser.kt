@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
@@ -18,6 +19,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun RegisterScreen(onRegisterSuccess: () -> Unit) {
+    var fullName by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var newUsername by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -35,10 +38,31 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
+            value = fullName,
+            onValueChange = { fullName = it },
+            label = { Text("Nome Completo") },
+            leadingIcon = { Icon(imageVector = Icons.Default.Person, contentDescription = "Nome Completo") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("E-mail") },
+            leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = "E-mail") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
             value = newUsername,
             onValueChange = { newUsername = it },
-            label = { Text("Novo Usuário") },
-            leadingIcon = { Icon(imageVector = Icons.Default.Person, contentDescription = "Novo Usuário") },
+            label = { Text("Nome de Usuário") },
+            leadingIcon = { Icon(imageVector = Icons.Default.Person, contentDescription = "Nome de Usuário") },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -73,7 +97,7 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(onClick = {
-            if (newUsername.isBlank() || newPassword.isBlank()) {
+            if (fullName.isBlank() || email.isBlank() || newUsername.isBlank() || newPassword.isBlank()) {
                 errorMessage = "Preencha todos os campos"
             } else if (newPassword != confirmPassword) {
                 errorMessage = "As senhas não coincidem"
