@@ -13,7 +13,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,7 +55,7 @@ fun DashboardScreen() {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             when (selectedScreen) {
-                "home" -> HomeScreen()
+                "home" -> HomeScreen { selectedScreen = "new_travel" }
                 "new_travel" -> NewTravelScreen()
                 "about" -> AboutScreen()
             }
@@ -65,11 +64,40 @@ fun DashboardScreen() {
 }
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(onLongPress: () -> Unit) {
+    var destination by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = { onLongPress() }
+                )
+            }
+    ) {
+        OutlinedTextField(
+            value = destination,
+            onValueChange = { destination = it },
+            label = { Text("Destino") },
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+fun NewTravelScreen() {
+    TravelForm()
+}
+
+@Composable
+fun TravelForm() {
     var startDate by remember { mutableStateOf("") }
     var endDate by remember { mutableStateOf("") }
     var destination by remember { mutableStateOf("") }
-    val coroutineScope = rememberCoroutineScope()
+    var budget by remember { mutableStateOf("") }
+    var tripType by remember { mutableStateOf("Negócio") }
 
     Column(
         modifier = Modifier
@@ -82,6 +110,26 @@ fun HomeScreen() {
             label = { Text("Destino") },
             modifier = Modifier.fillMaxWidth()
         )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text("Tipo")
+
+        Row(modifier = Modifier.fillMaxWidth()) {
+            RadioButton(
+                selected = tripType == "Negócio",
+                onClick = { tripType = "Negócio" }
+            )
+            Text("Negócio", modifier = Modifier.clickable { tripType = "Negócio" })
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            RadioButton(
+                selected = tripType == "Lazer",
+                onClick = { tripType = "Lazer" }
+            )
+            Text("Lazer", modifier = Modifier.clickable { tripType = "Lazer" })
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -103,29 +151,25 @@ fun HomeScreen() {
             modifier = Modifier.fillMaxWidth()
         )
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = budget,
+            onValueChange = { budget = it },
+            label = { Text("Orçamento") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+
         Spacer(modifier = Modifier.height(16.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp)
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onLongPress = {
-                            coroutineScope.launch {
-
-                                println("Long Click Detectado!")
-                            }
-                        }
-                    )
-                }
-        )
+        Button(
+            onClick = { /* TODO: Implementar ação de salvar */ },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Salvar")
+        }
     }
-}
-
-@Composable
-fun NewTravelScreen() {
-    Text("New Travel Screen")
 }
 
 @Composable

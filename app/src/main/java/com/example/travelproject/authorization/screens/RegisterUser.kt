@@ -99,6 +99,8 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit) {
         Button(onClick = {
             if (fullName.isBlank() || email.isBlank() || newUsername.isBlank() || newPassword.isBlank()) {
                 errorMessage = "Preencha todos os campos"
+            } else if (!Regex("^[A-Za-z0-9._%+-]+@gmail\\.com").matches(email)) {
+                errorMessage = "Insira um E-mail válido!"
             } else if (newPassword != confirmPassword) {
                 errorMessage = "As senhas não coincidem"
             } else {
