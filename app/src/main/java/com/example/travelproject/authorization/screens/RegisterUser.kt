@@ -1,5 +1,6 @@
 package com.example.navigation2025.screen
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -16,6 +17,11 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.atividadefinal.Database.AppDatabase
+import com.example.atividadefinal.Database.User
+import kotlinx.coroutines.launch
 
 @Composable
 fun RegisterScreen(onRegisterSuccess: () -> Unit) {
@@ -118,5 +124,26 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit) {
 fun RegisterScreenPreview() {
     MaterialTheme {
         RegisterScreen(onRegisterSuccess = {})
+    }
+}
+
+class RegisterViewModel : ViewModel() {
+    fun registerUser(context: Context, user: User, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val db = AppDatabase.getDatabase(context).userDao()
+
+
+            val userByUsername = db.getByUsername(user.username)
+            val userByEmail = db.getByEmail(user.email)
+
+            if (userByUsername != null) {
+                onResult(false, "Nome de usuário já cadastrado!")
+            } else if (userByEmail != null) {
+                onResult(false, "E-mail já cadastrado!")
+            } else {
+                db.insertUser(user)
+                onResult(true, "Usuário cadastrado com sucesso!")
+            }
+        }
     }
 }

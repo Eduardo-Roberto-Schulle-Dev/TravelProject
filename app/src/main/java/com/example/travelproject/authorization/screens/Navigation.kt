@@ -1,8 +1,8 @@
 package com.example.travelproject.navigation
 
+import LoginScreen
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.*
-import com.example.travelproject.authorization.screens.LoginScreen
 import com.example.navigation2025.screen.RegisterScreen
 import com.example.travelproject.screens.DashboardScreen
 
