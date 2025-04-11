@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -31,6 +32,9 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit) {
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
+
+    val context = LocalContext.current
+    val viewModel = remember { RegisterViewModel() }
 
     Column(
         modifier = Modifier
@@ -110,8 +114,19 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit) {
             } else if (newPassword != confirmPassword) {
                 errorMessage = "As senhas não coincidem"
             } else {
-                errorMessage = "Registro realizado com sucesso!"
-                onRegisterSuccess()
+                val user = User(
+                    username = newUsername,
+                    name = fullName,
+                    email = email,
+                    password = newPassword
+                )
+
+                viewModel.registerUser(context, user) { success, message ->
+                    errorMessage = message
+                    if (success) {
+                        onRegisterSuccess()
+                    }
+                }
             }
         }) {
             Text(text = "Registrar")
@@ -130,7 +145,8 @@ fun RegisterScreenPreview() {
 class RegisterViewModel : ViewModel() {
     fun registerUser(context: Context, user: User, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
-            val db = AppDatabase.getDatabase(context).userDao()
+
+            val db = AppDatabase.getDatabase(context.applicationContext).userDao()
 
 
             val userByUsername = db.getByUsername(user.username)
