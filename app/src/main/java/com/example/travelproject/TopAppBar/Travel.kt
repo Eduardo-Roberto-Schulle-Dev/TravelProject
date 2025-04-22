@@ -26,13 +26,14 @@ import com.example.travelproject.database.TripDao
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen() {
+fun DashboardScreen(navController: NavController) {
     var selectedScreen by remember { mutableStateOf("home") }
     var savedDestination by remember { mutableStateOf("") }
     var savedStartDate by remember { mutableStateOf("") }
@@ -66,7 +67,6 @@ fun DashboardScreen() {
             }
         }
     ) { paddingValues ->
-        val navController = rememberNavController()
 
         Column(
             modifier = Modifier
@@ -96,10 +96,12 @@ fun HomeScreen(savedDestination: String, savedStartDate: String, savedEndDate: S
                 )
             }
     ) {
+        
         Text(text = "Destino salvo: $savedDestination", style = MaterialTheme.typography.headlineMedium)
         Text(text = "Data de Início: $savedStartDate", style = MaterialTheme.typography.bodyLarge)
         Text(text = "Data Final: $savedEndDate", style = MaterialTheme.typography.bodyLarge)
         Text(text = "Orçamento: $savedBudget", style = MaterialTheme.typography.bodyLarge)
+
     }
 }
 
@@ -233,7 +235,14 @@ fun formatDate(dateString: String): String {
     }
 }
 
-
+// Formata corretamente o valor bruto para moeda brasileira
+fun formatCurrency(digits: String): String {
+    if (digits.isEmpty()) return ""
+    val parsed = digits.toBigDecimalOrNull() ?: return ""
+    val formatted = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
+        .format(parsed.divide(100.toBigDecimal()))
+    return formatted
+}
 
 
 @Composable
@@ -249,6 +258,7 @@ fun TravelForm(navController: NavController) {
     var destination by remember { mutableStateOf("") }
     val context = LocalContext.current
     val tripDao = AppDatabase.getDatabase(context).tripDao()
+    val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
     Column(
         modifier = Modifier
@@ -264,9 +274,9 @@ fun TravelForm(navController: NavController) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        DatePickerField(label = "Data de Início", date = startDate) { startDate = it }
+        DatePickerField(label = "Data de Início", date = startDate,dateFormatter=dateFormatter) { startDate = it }
         Spacer(modifier = Modifier.height(8.dp))
-        DatePickerField(label = "Data Final", date = endDate) { endDate = it }
+        DatePickerField(label = "Data Final", date = endDate,dateFormatter = dateFormatter) { endDate = it }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -313,33 +323,29 @@ fun TravelForm(navController: NavController) {
 }
 
 @Composable
-fun DatePickerField(label: String, date: String, onDateSelected: (String) -> Unit) {
+fun DatePickerField(label: String, date: String, dateFormatter: SimpleDateFormat, onDateSelected: (String) -> Unit) {
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
-    val year = calendar.get(Calendar.YEAR)
-    val month = calendar.get(Calendar.MONTH)
-    val day = calendar.get(Calendar.DAY_OF_MONTH)
 
     val datePickerDialog = DatePickerDialog(
         context,
-        { _, selectedYear, selectedMonth, selectedDay ->
-            onDateSelected("$selectedDay/${selectedMonth + 1}/$selectedYear")
-        }, year, month, day
+        { _, year, month, dayOfMonth ->
+            calendar.set(year, month, dayOfMonth)
+            onDateSelected(dateFormatter.format(calendar.time))
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
     )
 
     OutlinedTextField(
         value = date,
         onValueChange = {},
-        label = { Text(label) },
-        modifier = Modifier.fillMaxWidth(),
         readOnly = true,
-        trailingIcon = {
-            Icon(
-                Icons.Default.DateRange,
-                contentDescription = "Select Date",
-                modifier = Modifier.clickable { datePickerDialog.show() }
-            )
-        }
+        label = { Text(label) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { datePickerDialog.show() }
     )
 }
 
@@ -348,8 +354,3 @@ fun AboutScreen() {
     Text("About Screen")
 }
 
-@Preview(showSystemUi = true, showBackground = true)
-@Composable
-fun DashboardScreenPreview() {
-    DashboardScreen()
-}

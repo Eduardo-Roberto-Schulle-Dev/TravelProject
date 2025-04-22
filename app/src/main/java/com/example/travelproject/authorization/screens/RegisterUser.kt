@@ -20,12 +20,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.atividadefinal.Database.AppDatabase
 import com.example.atividadefinal.Database.User
 import kotlinx.coroutines.launch
 
 @Composable
-fun RegisterScreen(onRegisterSuccess: () -> Unit) {
+fun RegisterScreen(navController: NavController) {
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var newUsername by remember { mutableStateOf("") }
@@ -124,7 +126,7 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit) {
                 viewModel.registerUser(context, user) { success, message ->
                     errorMessage = message
                     if (success) {
-                        onRegisterSuccess()
+                        navController.navigate("menu")
                     }
                 }
             }
@@ -137,8 +139,10 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit) {
 @Preview(showSystemUi = true, showBackground = true)
 @Composable
 fun RegisterScreenPreview() {
+    val navController = rememberNavController()
+
     MaterialTheme {
-        RegisterScreen(onRegisterSuccess = {})
+        RegisterScreen(navController)
     }
 }
 

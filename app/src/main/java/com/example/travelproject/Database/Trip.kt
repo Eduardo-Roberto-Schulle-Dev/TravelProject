@@ -9,5 +9,5 @@ data class Trip(
     val destino: String,
     val dataInicio: String,
     val dataFinal: String,
-    val orcamento: Double
+    val orcamento: Double,
 )
