@@ -1,7 +1,6 @@
 package com.example.travelproject.screens
 
 import android.app.DatePickerDialog
-import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -22,28 +21,21 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.atividadefinal.Database.AppDatabase
 import com.example.travelproject.database.Trip
-import com.example.travelproject.database.TripDao
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(navController: NavController) {
     var selectedScreen by remember { mutableStateOf("home") }
-    var savedDestination by remember { mutableStateOf("") }
-    var savedStartDate by remember { mutableStateOf("") }
-    var savedEndDate by remember { mutableStateOf("") }
-    var savedBudget by remember { mutableStateOf("") }
 
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Travel") })
-        },
+        topBar = { TopAppBar(title = { Text("Travel") }) },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
@@ -67,7 +59,6 @@ fun DashboardScreen(navController: NavController) {
             }
         }
     ) { paddingValues ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -77,35 +68,12 @@ fun DashboardScreen(navController: NavController) {
         ) {
             when (selectedScreen) {
                 "home" -> ListTripsScreen(navController)
-                "new_travel" -> NewTravelScreen (navController)
+                "new_travel" -> NewTravelScreen(navController)
                 "about" -> AboutScreen()
             }
         }
     }
 }
-
-@Composable
-fun HomeScreen(savedDestination: String, savedStartDate: String, savedEndDate: String, savedBudget: String, onLongPress: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onLongPress = { onLongPress() }
-                )
-            }
-    ) {
-        
-        Text(text = "Destino salvo: $savedDestination", style = MaterialTheme.typography.headlineMedium)
-        Text(text = "Data de Início: $savedStartDate", style = MaterialTheme.typography.bodyLarge)
-        Text(text = "Data Final: $savedEndDate", style = MaterialTheme.typography.bodyLarge)
-        Text(text = "Orçamento: $savedBudget", style = MaterialTheme.typography.bodyLarge)
-
-    }
-}
-
-
 
 @Composable
 fun ListTripsScreen(navController: NavController) {
@@ -146,12 +114,9 @@ fun ListTripsScreen(navController: NavController) {
         } else {
             trips.forEach { trip ->
                 ElevatedCard(
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    )
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -165,30 +130,16 @@ fun ListTripsScreen(navController: NavController) {
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
-
                         Spacer(modifier = Modifier.height(12.dp))
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End
                         ) {
-                            IconButton(
-                                onClick = { navController.navigate("editTrip/${trip.id}") }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "Editar",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
+                            IconButton(onClick = { navController.navigate("editTrip/${trip.id}") }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
                             }
-                            IconButton(
-                                onClick = { tripToDelete = trip }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Excluir",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
+                            IconButton(onClick = { tripToDelete = trip }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Excluir", tint = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -197,7 +148,6 @@ fun ListTripsScreen(navController: NavController) {
         }
     }
 
-    // Diálogo de confirmação de exclusão
     if (tripToDelete != null) {
         AlertDialog(
             onDismissRequest = { tripToDelete = null },
@@ -208,8 +158,11 @@ fun ListTripsScreen(navController: NavController) {
                     onClick = {
                         CoroutineScope(Dispatchers.IO).launch {
                             tripToDelete?.let { tripDao.deleteTrip(it) }
-                            trips = tripDao.getAllTrips().sortedByDescending { it.id }
-                            tripToDelete = null
+                            val updatedTrips = tripDao.getAllTrips().sortedByDescending { it.id }
+                            withContext(Dispatchers.Main) {
+                                trips = updatedTrips
+                                tripToDelete = null
+                            }
                         }
                     }
                 ) {
@@ -224,26 +177,6 @@ fun ListTripsScreen(navController: NavController) {
         )
     }
 }
-fun formatDate(dateString: String): String {
-    return try {
-        val parser = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        val date = parser.parse(dateString)
-        date?.let { formatter.format(it) } ?: dateString
-    } catch (e: Exception) {
-        dateString
-    }
-}
-
-// Formata corretamente o valor bruto para moeda brasileira
-fun formatCurrency(digits: String): String {
-    if (digits.isEmpty()) return ""
-    val parsed = digits.toBigDecimalOrNull() ?: return ""
-    val formatted = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
-        .format(parsed.divide(100.toBigDecimal()))
-    return formatted
-}
-
 
 @Composable
 fun NewTravelScreen(navController: NavController) {
@@ -256,28 +189,49 @@ fun TravelForm(navController: NavController) {
     var endDate by remember { mutableStateOf("") }
     var budget by remember { mutableStateOf("") }
     var destination by remember { mutableStateOf("") }
+    var tipo by remember { mutableStateOf("") }
+
     val context = LocalContext.current
     val tripDao = AppDatabase.getDatabase(context).tripDao()
     val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+
+    val tipos = listOf("Negócio", "Lazer")
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
+
+        Text("Tipo de viagem", style = MaterialTheme.typography.titleMedium)
+        tipos.forEach { item ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp)
+            ) {
+                RadioButton(
+                    selected = tipo == item,
+                    onClick = { tipo = item }
+                )
+                Text(text = item)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         OutlinedTextField(
             value = destination,
             onValueChange = { destination = it },
             label = { Text("Destino") },
             modifier = Modifier.fillMaxWidth()
         )
-
         Spacer(modifier = Modifier.height(8.dp))
 
-        DatePickerField(label = "Data de Início", date = startDate,dateFormatter=dateFormatter) { startDate = it }
+        DatePickerField(label = "Data de Início", date = startDate, dateFormatter = dateFormatter) { startDate = it }
         Spacer(modifier = Modifier.height(8.dp))
-        DatePickerField(label = "Data Final", date = endDate,dateFormatter = dateFormatter) { endDate = it }
-
+        DatePickerField(label = "Data Final", date = endDate, dateFormatter = dateFormatter) { endDate = it }
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
@@ -287,12 +241,11 @@ fun TravelForm(navController: NavController) {
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
-
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {
-                if (destination.isBlank() || startDate.isBlank() || endDate.isBlank()) {
+                if (destination.isBlank() || startDate.isBlank() || endDate.isBlank() || tipo.isBlank()) {
                     Toast.makeText(context, "Preencha todos os campos obrigatórios", Toast.LENGTH_SHORT).show()
                 } else {
                     val budgetClean = budget.replace(Regex("[R$\\s.]"), "").replace(",", ".")
@@ -304,12 +257,13 @@ fun TravelForm(navController: NavController) {
                                 destino = destination,
                                 dataInicio = startDate,
                                 dataFinal = endDate,
-                                orcamento = budgetValue
+                                orcamento = budgetValue,
+                                tipo = tipo
                             )
                         )
-                        CoroutineScope(Dispatchers.Main).launch {
+                        withContext(Dispatchers.Main) {
                             Toast.makeText(context, "Viagem salva com sucesso!", Toast.LENGTH_SHORT).show()
-                            navController.popBackStack()
+                            navController.navigate("dashboard")
                         }
                     }
                 }
@@ -321,6 +275,9 @@ fun TravelForm(navController: NavController) {
         }
     }
 }
+
+
+
 
 @Composable
 fun DatePickerField(label: String, date: String, dateFormatter: SimpleDateFormat, onDateSelected: (String) -> Unit) {
@@ -351,6 +308,28 @@ fun DatePickerField(label: String, date: String, dateFormatter: SimpleDateFormat
 
 @Composable
 fun AboutScreen() {
-    Text("About Screen")
+    Text("O New Travel é um aplicativo desenvolvido para ajudar você a planejar e organizar suas viagens de forma prática e eficiente. Com ele, você pode registrar todas as suas viagens, escolhendo o tipo (Negócio ou Lazer), além de definir o local, a data de início e término, e o orçamento destinado à viagem.\n" +
+            "\n" +
+            "Nosso objetivo é oferecer uma experiência simples e funcional, permitindo que você mantenha o controle das suas viagens passadas e futuras, independentemente do motivo ou destino.\n" +
+            "\n" +
+            "Viajar é mais fácil com o New Travel. Organize, planeje e aproveite cada momento!")
 }
 
+fun formatDate(dateString: String): String {
+    return try {
+        val parser = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        val date = parser.parse(dateString)
+        date?.let { formatter.format(it) } ?: dateString
+    } catch (e: Exception) {
+        dateString
+    }
+}
+
+fun formatCurrency(digits: String): String {
+    if (digits.isEmpty()) return ""
+    val parsed = digits.toBigDecimalOrNull() ?: return ""
+    val formatted = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
+        .format(parsed.divide(100.toBigDecimal()))
+    return formatted
+}

@@ -10,4 +10,5 @@ data class Trip(
     val dataInicio: String,
     val dataFinal: String,
     val orcamento: Double,
+    val tipo: String
 )
