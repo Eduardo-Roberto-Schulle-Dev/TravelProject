@@ -1,7 +1,6 @@
 package com.example.navigation2025.screen
 
 import android.content.Context
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -41,7 +40,6 @@ fun RegisterScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Color.Cyan)
             .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -126,7 +124,7 @@ fun RegisterScreen(navController: NavController) {
                 viewModel.registerUser(context, user) { success, message ->
                     errorMessage = message
                     if (success) {
-                        navController.navigate("menu")
+                        navController.navigate("login")
                     }
                 }
             }
@@ -149,9 +147,7 @@ fun RegisterScreenPreview() {
 class RegisterViewModel : ViewModel() {
     fun registerUser(context: Context, user: User, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
-
             val db = AppDatabase.getDatabase(context.applicationContext).userDao()
-
 
             val userByUsername = db.getByUsername(user.username)
             val userByEmail = db.getByEmail(user.email)

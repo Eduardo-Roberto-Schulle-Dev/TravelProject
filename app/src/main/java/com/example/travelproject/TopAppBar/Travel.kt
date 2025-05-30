@@ -5,7 +5,9 @@ import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -20,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.atividadefinal.Database.AppDatabase
+import com.example.travelproject.TopAppBar.generateSuggestionFromGemini
 import com.example.travelproject.database.Trip
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -87,10 +90,14 @@ fun ListTripsScreen(navController: NavController) {
         trips = tripDao.getAllTrips().sortedByDescending { it.id }
     }
 
+
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(24.dp)
+            .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Text(
@@ -178,11 +185,12 @@ fun ListTripsScreen(navController: NavController) {
     }
 }
 
+
+
 @Composable
 fun NewTravelScreen(navController: NavController) {
     TravelForm(navController)
 }
-
 @Composable
 fun TravelForm(navController: NavController) {
     var startDate by remember { mutableStateOf("") }
@@ -190,6 +198,7 @@ fun TravelForm(navController: NavController) {
     var budget by remember { mutableStateOf("") }
     var destination by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf("") }
+    var travelPlan by remember { mutableStateOf("") }
 
     val context = LocalContext.current
     val tripDao = AppDatabase.getDatabase(context).tripDao()
@@ -197,12 +206,23 @@ fun TravelForm(navController: NavController) {
 
     val tipos = listOf("Negócio", "Lazer")
 
+    LaunchedEffect(destination) {
+        if (destination.isNotBlank()) {
+            try {
+                val sugestao = generateSuggestionFromGemini(destination, endDate, startDate)
+                travelPlan = sugestao
+            } catch (e: Exception) {
+                travelPlan = "Erro ao gerar sugestão: ${e.message}"
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
+            .verticalScroll(rememberScrollState())
     ) {
-
         Text("Tipo de viagem", style = MaterialTheme.typography.titleMedium)
         tipos.forEach { item ->
             Row(
@@ -243,6 +263,20 @@ fun TravelForm(navController: NavController) {
         )
         Spacer(modifier = Modifier.height(16.dp))
 
+
+        if (travelPlan.isNotBlank()) {
+            Text(
+                text = "Sugestão de Roteiro:\n$travelPlan",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+
+
+
         Button(
             onClick = {
                 if (destination.isBlank() || startDate.isBlank() || endDate.isBlank() || tipo.isBlank()) {
@@ -275,6 +309,8 @@ fun TravelForm(navController: NavController) {
         }
     }
 }
+
+
 
 
 
