@@ -199,23 +199,28 @@ fun TravelForm(navController: NavController) {
     var destination by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf("") }
     var travelPlan by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val tripDao = AppDatabase.getDatabase(context).tripDao()
     val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-
     val tipos = listOf("Negócio", "Lazer")
 
-    LaunchedEffect(destination) {
-        if (destination.isNotBlank()) {
+    LaunchedEffect(destination, startDate, endDate) {
+        if (destination.isNotBlank() && startDate.isNotBlank() && endDate.isNotBlank()) {
+            isLoading = true
+            travelPlan = ""
             try {
                 val sugestao = generateSuggestionFromGemini(destination, endDate, startDate)
                 travelPlan = sugestao
             } catch (e: Exception) {
                 travelPlan = "Erro ao gerar sugestão: ${e.message}"
+            } finally {
+                isLoading = false
             }
         }
     }
+
 
     Column(
         modifier = Modifier
@@ -247,6 +252,7 @@ fun TravelForm(navController: NavController) {
             label = { Text("Destino") },
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(modifier = Modifier.height(8.dp))
 
         DatePickerField(label = "Data de Início", date = startDate, dateFormatter = dateFormatter) { startDate = it }
@@ -261,21 +267,36 @@ fun TravelForm(navController: NavController) {
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(modifier = Modifier.height(16.dp))
 
+        Text(
+            text = "Sugestão de Roteiro:",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 16.dp)
+        )
 
-        if (travelPlan.isNotBlank()) {
-            Text(
-                text = "Sugestão de Roteiro:\n$travelPlan",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
+        when {
+            isLoading -> {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            travelPlan.isNotBlank() -> {
+                Text(
+                    text = travelPlan,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))
-
-
-
 
         Button(
             onClick = {
@@ -309,6 +330,7 @@ fun TravelForm(navController: NavController) {
         }
     }
 }
+
 
 
 
