@@ -2,7 +2,9 @@ package com.example.travelproject.authorization.screens
 
 
 import android.annotation.SuppressLint
+import android.os.Build
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -19,6 +21,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.atividadefinal.Database.AppDatabase
+import com.example.travelproject.TopAppBar.MyDatePicker
 import com.example.travelproject.database.Trip
 import com.example.travelproject.screens.formatCurrency
 import kotlinx.coroutines.CoroutineScope
@@ -26,10 +29,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Currency
 import java.util.Locale
 
+@RequiresApi(Build.VERSION_CODES.O)
 @SuppressLint("SuspiciousIndentation")
 @Composable
 fun EditTripScreen(navController: NavController, tripId: Int) {
@@ -40,9 +46,12 @@ fun EditTripScreen(navController: NavController, tripId: Int) {
 
     var destination by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("Lazer") }
-    var startDate by remember { mutableStateOf("") }
-    var endDate by remember { mutableStateOf("") }
+    var startDate by remember { mutableStateOf(LocalDate.MIN) }
+    var endDate by remember { mutableStateOf(LocalDate.MIN) }
     var budget by remember { mutableStateOf("0") }
+
+
+    val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
     val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
@@ -50,8 +59,18 @@ fun EditTripScreen(navController: NavController, tripId: Int) {
         trip = tripDao.getTripById(tripId)
         trip?.let {
             destination = it.destino
-            startDate = it.dataInicio
-            endDate = it.dataFinal
+            startDate = try {
+                LocalDate.parse(it.dataInicio, formatter)
+            } catch (e: Exception) {
+                null
+            }
+
+            endDate = try {
+                LocalDate.parse(it.dataFinal, formatter)
+            } catch (e: Exception) {
+                null
+            }
+
             budget = it.orcamento.toString()
         }
     }
@@ -77,13 +96,23 @@ fun EditTripScreen(navController: NavController, tripId: Int) {
         )
 
 
-        DatePickerField(label = "Data de Início", date = startDate, dateFormatter = dateFormatter) {
-            startDate = it
-        }
+        MyDatePicker(
+            label = "Data inicial",
+            value = if (startDate != LocalDate.MIN) startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) else "",
+            onValueChange = { selectedDate: LocalDate ->
+                startDate = selectedDate
+            }
+        )
 
-        DatePickerField(label = "Data Final", date = endDate, dateFormatter = dateFormatter) {
-            endDate = it
-        }
+
+        MyDatePicker(
+            label = "Data final",
+            value = if (endDate != LocalDate.MIN) endDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) else "",
+            onValueChange = { selectedDate: LocalDate ->
+                endDate = selectedDate
+            }
+        )
+
 
         OutlinedTextField(
             value = budget,
@@ -117,8 +146,9 @@ fun EditTripScreen(navController: NavController, tripId: Int) {
                 onClick = {
                     val updatedTrip = trip?.copy(
                         destino = destination,
-                        dataInicio = startDate,
-                        dataFinal = endDate,
+
+                    dataInicio = startDate.format(formatter),
+                    dataFinal = endDate.format(formatter),
                         orcamento = budget.toDoubleOrNull() ?: 0.0
                     )
 

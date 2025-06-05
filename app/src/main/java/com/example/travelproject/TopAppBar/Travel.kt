@@ -1,7 +1,9 @@
 package com.example.travelproject.screens
 
 import android.app.DatePickerDialog
+import android.os.Build
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.atividadefinal.Database.AppDatabase
+import com.example.travelproject.TopAppBar.MyDatePicker
 import com.example.travelproject.TopAppBar.generateSuggestionFromGemini
 import com.example.travelproject.database.Trip
 import kotlinx.coroutines.CoroutineScope
@@ -30,8 +33,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.*
+import kotlin.reflect.typeOf
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(navController: NavController) {
@@ -82,9 +89,13 @@ fun DashboardScreen(navController: NavController) {
 fun ListTripsScreen(navController: NavController) {
     val context = LocalContext.current
     val tripDao = AppDatabase.getDatabase(context).tripDao()
+    var isDialogOpen by remember { mutableStateOf(false) }
+    var aiSuggestion by remember { mutableStateOf("") }
 
     var trips by remember { mutableStateOf(emptyList<Trip>()) }
     var tripToDelete by remember { mutableStateOf<Trip?>(null) }
+    var travelPlan by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         trips = tripDao.getAllTrips().sortedByDescending { it.id }
@@ -148,11 +159,85 @@ fun ListTripsScreen(navController: NavController) {
                             IconButton(onClick = { tripToDelete = trip }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Excluir", tint = MaterialTheme.colorScheme.error)
                             }
+
+                            Button(
+                                onClick = {
+                                    isDialogOpen = true
+
+                                    if (trip.sugestao == ""){
+                                        isLoading = true
+
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            try {
+                                                val sugestao = generateSuggestionFromGemini(trip.destino, trip.dataInicio, trip.dataFinal, trip.orcamento, trip.tipo)
+
+                                                val updatedTrip = trip.copy(sugestao = sugestao)
+                                                tripDao.updateTrip(updatedTrip)
+
+                                                trips = tripDao.getAllTrips().sortedByDescending { it.id }
+
+                                                withContext(Dispatchers.Main) {
+                                                    aiSuggestion = sugestao
+                                                }
+                                            } catch (e: Exception) {
+                                                withContext(Dispatchers.Main) {
+                                                    aiSuggestion = "Erro ao gerar sugestão: ${e.message}"
+                                                }
+                                            } finally {
+                                                isLoading = false
+                                            }
+                                        }
+                                    } else {
+                                        aiSuggestion = trip.sugestao
+                                    }
+                                },
+                                modifier = Modifier.wrapContentWidth()
+                            ) {
+                                Text("Sugestão de Roteiro")
+                            }
+
                         }
+
                     }
                 }
             }
         }
+    }
+
+    if (isDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { isDialogOpen = false },
+            confirmButton = {
+                TextButton(onClick = { isDialogOpen = false }) {
+                    Text("Fechar")
+                }
+            },
+            title = {
+                Text("Sugestões de Destinos")
+            },
+            text = {
+                if (isLoading) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Gerando sugestões...")
+                    }
+                } else {
+                    // Conteúdo rolável para sugestões longas
+                    Box(
+                        modifier = Modifier
+                            .heightIn(max = 200.dp) // Limita a altura do conteúdo para habilitar scroll
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Text(aiSuggestion)
+                    }
+                }
+            }
+        )
     }
 
     if (tripToDelete != null) {
@@ -187,40 +272,27 @@ fun ListTripsScreen(navController: NavController) {
 
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NewTravelScreen(navController: NavController) {
     TravelForm(navController)
 }
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun TravelForm(navController: NavController) {
-    var startDate by remember { mutableStateOf("") }
-    var endDate by remember { mutableStateOf("") }
+    var startDate by remember { mutableStateOf(LocalDate.MIN) }
+    var endDate by remember { mutableStateOf(LocalDate.MIN) }
     var budget by remember { mutableStateOf("") }
     var destination by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf("") }
     var travelPlan by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
+
     val context = LocalContext.current
     val tripDao = AppDatabase.getDatabase(context).tripDao()
-    val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     val tipos = listOf("Negócio", "Lazer")
-
-    LaunchedEffect(destination, startDate, endDate) {
-        if (destination.isNotBlank() && startDate.isNotBlank() && endDate.isNotBlank()) {
-            isLoading = true
-            travelPlan = ""
-            try {
-                val sugestao = generateSuggestionFromGemini(destination, endDate, startDate)
-                travelPlan = sugestao
-            } catch (e: Exception) {
-                travelPlan = "Erro ao gerar sugestão: ${e.message}"
-            } finally {
-                isLoading = false
-            }
-        }
-    }
-
 
     Column(
         modifier = Modifier
@@ -255,9 +327,24 @@ fun TravelForm(navController: NavController) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        DatePickerField(label = "Data de Início", date = startDate, dateFormatter = dateFormatter) { startDate = it }
+        MyDatePicker(
+            label = "Data inicial",
+            value = if (startDate != LocalDate.MIN) startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) else "",
+            onValueChange = { selectedDate: LocalDate ->
+                startDate = selectedDate
+            }
+        )
+
         Spacer(modifier = Modifier.height(8.dp))
-        DatePickerField(label = "Data Final", date = endDate, dateFormatter = dateFormatter) { endDate = it }
+
+
+        MyDatePicker(
+            label = "Data final",
+            value = if (endDate != LocalDate.MIN) endDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) else "",
+            onValueChange = { selectedDate: LocalDate ->
+                endDate = selectedDate
+            }
+        )
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
@@ -269,6 +356,40 @@ fun TravelForm(navController: NavController) {
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                if (destination.isBlank() || startDate == LocalDate.MIN || endDate == LocalDate.MIN) {
+                    Toast.makeText(context, "Preencha destino, data de início e data final", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+
+                isLoading = true
+                travelPlan = ""
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val budgetClean = budget.replace(Regex("[R$\\s.]"), "").replace(",", ".")
+                        val budgetValue = budgetClean.toDoubleOrNull() ?: 0.0
+
+                        val sugestao = generateSuggestionFromGemini(destination, endDate.toString(), startDate.toString(), budgetValue, tipo)
+                        withContext(Dispatchers.Main) {
+                            travelPlan = sugestao
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            travelPlan = "Erro ao gerar sugestão: ${e.message}"
+                        }
+                    } finally {
+                        withContext(Dispatchers.Main) {
+                            isLoading = false
+                        }
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Gerar Roteiro")
+        }
 
         Text(
             text = "Sugestão de Roteiro:",
@@ -300,7 +421,7 @@ fun TravelForm(navController: NavController) {
 
         Button(
             onClick = {
-                if (destination.isBlank() || startDate.isBlank() || endDate.isBlank() || tipo.isBlank()) {
+                if (destination.isBlank() || startDate == LocalDate.MIN || endDate == LocalDate.MIN) {
                     Toast.makeText(context, "Preencha todos os campos obrigatórios", Toast.LENGTH_SHORT).show()
                 } else {
                     val budgetClean = budget.replace(Regex("[R$\\s.]"), "").replace(",", ".")
@@ -310,10 +431,11 @@ fun TravelForm(navController: NavController) {
                         tripDao.insertTrip(
                             Trip(
                                 destino = destination,
-                                dataInicio = startDate,
-                                dataFinal = endDate,
+                                dataInicio = startDate.format(formatter),
+                                dataFinal = endDate.format(formatter),
                                 orcamento = budgetValue,
-                                tipo = tipo
+                                tipo = tipo,
+                                sugestao = ""
                             )
                         )
                         withContext(Dispatchers.Main) {
@@ -331,14 +453,13 @@ fun TravelForm(navController: NavController) {
     }
 }
 
-
-
-
-
-
-
 @Composable
-fun DatePickerField(label: String, date: String, dateFormatter: SimpleDateFormat, onDateSelected: (String) -> Unit) {
+fun DatePickerField(
+    label: String,
+    date: String,
+    dateFormatter: SimpleDateFormat,
+    onDateSelected: (String) -> Unit
+) {
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
 
@@ -353,15 +474,20 @@ fun DatePickerField(label: String, date: String, dateFormatter: SimpleDateFormat
         calendar.get(Calendar.DAY_OF_MONTH)
     )
 
-    OutlinedTextField(
-        value = date,
-        onValueChange = {},
-        readOnly = true,
-        label = { Text(label) },
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { datePickerDialog.show() }
-    )
+    ) {
+        OutlinedTextField(
+            value = date,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = false
+        )
+    }
 }
 
 @Composable

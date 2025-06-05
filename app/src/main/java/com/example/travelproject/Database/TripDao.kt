@@ -13,6 +13,10 @@ interface TripDao {
     @Query("SELECT * FROM trip WHERE id = :id")
     suspend fun getTripById(id: Int): Trip?
 
+   @Query("UPDATE trip SET sugestao = :suggestion WHERE id = :tripId")
+    suspend fun updateSuggestion(tripId: Int, suggestion: String)
+
+
     @Update
     suspend fun updateTrip(trip: Trip)
 

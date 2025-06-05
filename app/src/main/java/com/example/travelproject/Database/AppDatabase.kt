@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.travelproject.database.Trip
 import com.example.travelproject.database.TripDao
 
-@Database(entities = [User::class, Trip::class], version = 3, exportSchema = true)
+@Database(entities = [User::class, Trip::class], version = 4, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun tripDao(): TripDao
@@ -31,6 +31,12 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE trip ADD COLUMN sugestao TEXT not null default ''")
+            }
+        }
+
 
 
         fun getDatabase(context: Context): AppDatabase {
@@ -41,11 +47,13 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "travelapp_database"
-                ).addMigrations( MIGRATION_1_2,  MIGRATION_2_3)
+                ).addMigrations( MIGRATION_1_2,  MIGRATION_2_3,MIGRATION_3_4)
 
                     .build()
                 INSTANCE = instance
                 instance
+
+
             }
 
         }

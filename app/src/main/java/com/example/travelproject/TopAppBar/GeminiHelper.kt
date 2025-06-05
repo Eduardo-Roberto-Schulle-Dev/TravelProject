@@ -4,7 +4,7 @@ import android.util.Log
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
 
-suspend fun generateSuggestionFromGemini(cidade: String, dataFinal: String, dataInicio: String): String {
+suspend fun generateSuggestionFromGemini(cidade: String, dataFinal: String, dataInicio: String, orcamento: Double, tipo: String): String {
     return try {
         val generativeModel = GenerativeModel(
             modelName = "gemini-2.0-flash",
@@ -12,7 +12,7 @@ suspend fun generateSuggestionFromGemini(cidade: String, dataFinal: String, data
         )
 
         val prompt = content {
-            text("Monte um roteiro de viagem com pontos turísticos e atividades para a cidade de $cidade entre os dias $dataInicio e $dataFinal.")
+            text("Monte um roteiro de viagem com pontos turísticos e atividades para a cidade de $cidade entre os dias $dataInicio e $dataFinal. seguindo o seguinte orçamento $orcamento e o seguinte tipo de viagem $tipo")
         }
 
         val response = generativeModel.generateContent(prompt)
